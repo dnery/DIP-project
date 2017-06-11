@@ -10,7 +10,9 @@
 #include <opencv2/highgui.hpp>
 
 // pixel neighborhood size
-#define NSPAN 15
+#ifndef NSPAN
+#define NSPAN 5
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -72,7 +74,7 @@ int main(int argc, char *argv[])
                     uchar neighbour_value = image.data[irow_n*image.cols+icol_n];
 
                     // If the pixels have similarity greater than a certain measure, link them
-                    if (255-std::abs(value-neighbour_value) >= 245) {
+                    if (255-std::abs(value-neighbour_value) >= 253) {
                         igraph_vector_push_back(&edges, irow*image.cols+icol);
                         igraph_vector_push_back(&edges, irow_n*image.cols+icol_n);
                     }
@@ -95,7 +97,10 @@ int main(int argc, char *argv[])
         using std::ofstream;
         ofstream graph_file;  // output graph to this file
 
-        graph_file.open("image_as_graph.txt", ofstream::out|ofstream::trunc);
+        graph_file.open("image_to_graph.out", ofstream::out|ofstream::trunc);
+
+        // Downsampled image dims outputted as header
+        graph_file << image.rows << " " << image.cols << std::endl;
 
         // Graph is outputted to file as an edgelist
         for (igraph_integer_t iedge = 0; iedge < igraph_ecount(&graph); iedge++) {
