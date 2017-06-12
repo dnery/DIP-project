@@ -3,7 +3,7 @@
 #include <iostream>
 
 // igraph includes
-#include <igraph/igraph.h>
+#include "igraph/include/igraph.h"
 
 // opencv includes
 #include <opencv2/core.hpp>
@@ -11,7 +11,7 @@
 
 // pixel neighborhood size
 #ifndef NSPAN
-#define NSPAN 5
+#define NSPAN 3
 #endif
 
 int main(int argc, char *argv[])
@@ -115,9 +115,9 @@ int main(int argc, char *argv[])
     std::cerr << "Done." << std::endl;
 
     // Step 3: show stuff and whatnot
-    cv::namedWindow("Main Window", cv::WINDOW_AUTOSIZE);
-    cv::imshow("Main Window", image);
-    cv::waitKey(0);
+    //cv::namedWindow("Main Window", cv::WINDOW_AUTOSIZE);
+    //cv::imshow("Main Window", image);
+    //cv::waitKey(0);
 
     // Step 4: cleanup & goodbye
     igraph_destroy(&graph);
