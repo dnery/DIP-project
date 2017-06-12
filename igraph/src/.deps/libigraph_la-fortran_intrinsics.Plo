@@ -1,7 +1,0 @@
-libigraph_la-fortran_intrinsics.lo: fortran_intrinsics.c \
- /usr/include/stdc-predef.h \
- /usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1/include/float.h
-
-/usr/include/stdc-predef.h:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1/include/float.h:
