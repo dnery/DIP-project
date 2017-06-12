@@ -109,7 +109,7 @@ am__can_run_installinfo = \
   esac
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} /home/danilo/Projects/DIP/DIP-project/igraph/missing aclocal-1.14
+ACLOCAL = ${SHELL} /home/danilo/Projects/DIP/DIP-project/igraph/missing aclocal-1.15
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 1
 AR = ar
@@ -117,7 +117,7 @@ AS = as
 AUTOCONF = ${SHELL} /home/danilo/Projects/DIP/DIP-project/igraph/missing autoconf
 AUTOHEADER = ${SHELL} /home/danilo/Projects/DIP/DIP-project/igraph/missing autoheader
 AUTOM4TE = ${SHELL} /home/danilo/Projects/DIP/DIP-project/igraph/missing autom4te
-AUTOMAKE = ${SHELL} /home/danilo/Projects/DIP/DIP-project/igraph/missing automake-1.14
+AUTOMAKE = ${SHELL} /home/danilo/Projects/DIP/DIP-project/igraph/missing automake-1.15
 AWK = gawk
 CC = gcc
 CCDEPMODE = depmode=gcc3

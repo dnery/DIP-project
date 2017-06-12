@@ -3,7 +3,7 @@
 #include <iostream>
 
 // igraph includes
-#include "igraph/include/igraph.h"
+#include <igraph.h>
 
 // opencv includes
 #include <opencv2/core.hpp>

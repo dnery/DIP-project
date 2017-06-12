@@ -1,2 +1,3 @@
 -std=c++11
 -stdlib=libstdc++
+-I ./igraph/include

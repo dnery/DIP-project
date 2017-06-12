@@ -1,4 +1,12 @@
 *.zip
 *.pdf
 *.txt
+*.o
+*.a
+*.lo
+*.la
+*.so
+*.so.*
+.libs/
 image_to_graph
+image_to_graph.out*

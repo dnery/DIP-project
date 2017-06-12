@@ -1,12 +1,23 @@
-You'll need OpenCV for this. The igraph package is also needed and it's included.
+You'll need to have installed on your system:
+- automake/autoconf/autoreconf (Linux package)
+- OpenCV (opencv2 headers & python3 package)
+- Matplotlib (python3)
+- NetworkX (python3)
+- Numpy (python3)
+
+
+The `igraph` C library is also used and bundled together. It takes a few minutes
+to build (`make deps` step), so just hang in there.
+
 
 Compile:
 ```
-make config
-make
+make deps
+make build
 ```
 
-Run stack:
+
+Run tests:
 ```
-./image_to_graph <input_image> && python display_graph.py <input_image>
+make tests
 ```
