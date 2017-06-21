@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 
@@ -10,28 +11,57 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
-// pixel neighborhood radius
-#ifndef NHOODRADIUS
-#define NHOODRADIUS 50
-#endif
+// // pixel neighborhood radius
+// #ifndef NHOODRADIUS
+// #define NHOODRADIUS 50
+// #endif
+//
+// // pixel similarity constant
+// #ifndef SIMILARITY
+// #define SIMILARITY 254
+// #endif
 
-// pixel similarity constant
-#ifndef SIMILARITY
-#define SIMILARITY 254
-#endif
+/// Show program usage
+void usage(const char *program_name) {
+    std::cerr << "Usage: " << program_name << " <image name> "
+            "<neighbourhood radius> <pixel similarity> "
+            "[reduce: 1..3 (default: 1)]" << std::endl;
+}
 
 int main(int argc, char *argv[])
 {
-    // Failure: TODO
-    if (argc < 2)
+    // CLI arguments
+    const char *filename;
+    int NHOODRADIUS, SIMILARITY, imread_flags, arg_error = 0;
+    {
+        if (argc < 4) arg_error = 1;
+        else {
+            filename = argv[1];
+            NHOODRADIUS = atoi(argv[2]);
+            SIMILARITY = atoi(argv[3]);
+            int REDUCE_IDX = argc > 4 ? atoi(argv[4]) : 1;
+            if (NHOODRADIUS && SIMILARITY && REDUCE_IDX > 0 && REDUCE_IDX <= 3) {
+                const int imread_possible_flags[] = {
+                    cv::IMREAD_GRAYSCALE,
+                    cv::IMREAD_REDUCED_GRAYSCALE_2,
+                    cv::IMREAD_REDUCED_GRAYSCALE_4,
+                };
+                imread_flags = imread_possible_flags[REDUCE_IDX - 1];
+            }
+            else arg_error = 1;
+        }
+    }
+    if (arg_error) {
+        usage(argv[0]);
         return EXIT_FAILURE;
+    }
 
     // Step 1: retrieve the image
     std::cerr << "Reading image... ";
 
     // Image to be processed, downscaled by a factor of 2
     //cv::Mat image = cv::imread(argv[1], cv::IMREAD_GRAYSCALE);
-    cv::Mat image = cv::imread(argv[1], cv::IMREAD_REDUCED_GRAYSCALE_2);
+    cv::Mat image = cv::imread(filename, imread_flags);
     //cv::Mat image = cv::imread(argv[1], cv::IMREAD_REDUCED_GRAYSCALE_4);
 
     // Failure: TODO

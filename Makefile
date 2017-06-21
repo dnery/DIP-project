@@ -1,5 +1,9 @@
-all:
-	g++ image_to_graph.cc -o image_to_graph -O3 -Wall `pkg-config --cflags --libs opencv igraph`
+exe = image_to_graph
+external_libraries = opencv igraph
+CXXFLAGS = -O3 -Wall `pkg-config --cflags --libs $(external_libraries)`
+
+all: image_to_graph.o
+	$(CXX) $^ -o $(exe) $(CXXFLAGS)
 	@#echo "Build the dependencies, the local program and then run some tests:"
 	@#echo "  make deps"
 	@#echo "  make build"
@@ -16,7 +20,7 @@ all:
 	#g++ image_to_graph.cc -o image_to_graph -O3 -Wall -I ./igraph/include -L ./igraph/src/.libs -ligraph `pkg-config --cflags --libs opencv igraph`
 
 run:
-	./image_to_graph assets/lena.jpg
+	./$(exe) assets/lena.jpg 50 254 2
 
 tests:
 	@echo "Test: Lena"
