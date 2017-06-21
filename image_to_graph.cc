@@ -20,19 +20,28 @@
 #define SIMILARITY 254
 #endif
 
+// TODO
+// - Use colored images for graph generation
+// - Implement superpixels procedure
+// - Do a shitload of tests
+
 int main(int argc, char *argv[])
 {
     // Failure: TODO
-    if (argc < 2)
+    if (argc < 2) {
+        std::cerr << "Usage: ./image_to_graph <path_to_image>" << std::endl;
         return EXIT_FAILURE;
+    }
+
+
 
     // Step 1: retrieve the image
     std::cerr << "Reading image... ";
 
     // Image to be processed, downscaled by a factor of 2
-    //cv::Mat image = cv::imread(argv[1], cv::IMREAD_GRAYSCALE);
-    cv::Mat image = cv::imread(argv[1], cv::IMREAD_REDUCED_GRAYSCALE_2);
-    //cv::Mat image = cv::imread(argv[1], cv::IMREAD_REDUCED_GRAYSCALE_4);
+    //cv::Mat image = cv::imread(argv[1], cv::IMREAD_GRAYSCALE);            // <- fuckin' don't
+    cv::Mat image = cv::imread(argv[1], cv::IMREAD_REDUCED_GRAYSCALE_2);    // <- for sure
+    //cv::Mat image = cv::imread(argv[1], cv::IMREAD_REDUCED_GRAYSCALE_4);  // <- maybe
 
     // Failure: TODO
     if (image.empty()) {
@@ -41,6 +50,8 @@ int main(int argc, char *argv[])
     }
 
     std::cerr << "Done. Image is " << image.cols << " by " << image.rows << "." << std::endl;
+
+
 
     // Step 2.1: build graph from image
     std::cerr << "Building graph... ";
@@ -67,7 +78,7 @@ int main(int argc, char *argv[])
 
     // Relate pixels that satisfy the weight function W(i,j) = 1 − |Ii−Ij| ≥ t
     // -> Since our values are normalized, 1 is replaced with 255 (max intensity)
-    //    and t is chosen to be 253 (arbitrary measure, has to be studied better)
+    //    and t is chosen to be 254 (arbitrary measure, has to be studied better)
     for (int irow = 0; irow < image.rows; irow++) {
         for (int icol = 0; icol < image.cols; icol++) {
             uchar value = image.data[irow*image.cols+icol];
@@ -104,6 +115,8 @@ int main(int argc, char *argv[])
 
     std::cerr << "Done. Graph has " << igraph_ecount(&graph) << " edges." << std::endl;
 
+
+
 #if 0
     // Step 2.2: write graph to a file
     std::cerr << "Writing to file... ";
@@ -129,7 +142,9 @@ int main(int argc, char *argv[])
     std::cerr << "Done." << std::endl;
 #endif
 
-    // Step 3: evaluate communities and separate segments
+
+
+    // Step 2.3: evaluate communities and separate segments
     std::cerr << "Evaluating communities & painting segments... ";
 
     igraph_matrix_t merges;      // Merge steps array
@@ -148,9 +163,8 @@ int main(int argc, char *argv[])
     //        /*membership vector*/ NULL);
 
     // Membership vector
-    size_t i_maxmod = igraph_vector_which_max(&modularity);  // Max modularity index
-    igraph_community_to_membership(&merges, igraph_vcount(&graph), i_maxmod,
-            &membership, 0);
+    size_t imod = igraph_vector_which_max(&modularity);  // Max modularity index
+    igraph_community_to_membership(&merges, igraph_vcount(&graph), imod, &membership, 0);
 
     // Paint segments
     cv::Mat segments = image.clone();                        // Image copy, to be painted
@@ -158,11 +172,13 @@ int main(int argc, char *argv[])
     for (long ipixel = 0; ipixel < segments.rows*segments.cols; ipixel++)
         segments.data[ipixel] = (uchar)(VECTOR(membership)[ipixel]*255.0f/max_seg_val);
 
-    std::cerr << "Done. Max modularity is " << VECTOR(modularity)[i_maxmod]
-        << " with " << (int)igraph_vector_max(&membership) << " communities."
-        << std::endl;
+    std::cerr << "Done. Max modularity is " << VECTOR(modularity)[imod]
+        << " with " << (int)igraph_vector_max(&membership)
+        << " communities." << std::endl;
 
-    // Step 4: show segmentation results
+
+
+    // Step 3: show segmentation results
     cv::Mat colored_segments;
     cv::applyColorMap(segments, colored_segments, cv::COLORMAP_JET);
 
@@ -176,7 +192,10 @@ int main(int argc, char *argv[])
     cv::imshow("Output", colored_segments);
     while((cv::waitKey() & 0xEFFFFF) != 27);
 
+
+
     // Step 5: cleanup & goodbye
+    std::cerr << "Cleaning up memory... ";
 
     // Community allocation stuff
     igraph_vector_destroy(&membership);
@@ -187,6 +206,8 @@ int main(int argc, char *argv[])
     igraph_vector_destroy(&weights);
     igraph_vector_destroy(&edges);
     igraph_destroy(&graph);
+
+    std::cerr << "Done." << std::endl;
 
     return EXIT_SUCCESS;
 }
