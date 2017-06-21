@@ -1,0 +1,5 @@
+SET 1
+=====
+similarity = 254
+scan radius = 50
+scale factor = 2

@@ -8,10 +8,13 @@ all:
 
 deps:
 	@cd igraph && autoreconf -f -i && ./configure && cd ..
-	$(MAKE) -C igraph
+	$(MAKE) -j $(nproc) -C igraph
 
 build:
-	g++ image_to_graph.cc -o image_to_graph -Wall -I ./igraph/include -L ./igraph/src/.libs -ligraph `pkg-config --cflags --libs opencv`
+	g++ image_to_graph.cc -o image_to_graph -O3 -Wall -I ./igraph/include -L ./igraph/src/.libs -ligraph `pkg-config --cflags --libs opencv`
+
+runlena:
+	LD_LIBRARY_PATH=./igraph/src/.libs ./image_to_graph assets/lena.jpg
 
 tests:
 	@echo "Test: Lena"
