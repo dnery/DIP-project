@@ -12,12 +12,12 @@
 
 // pixel neighborhood radius
 #ifndef NHOODRADIUS
-#define NHOODRADIUS 50
+#define NHOODRADIUS 35
 #endif
 
 // pixel similarity constant
 #ifndef SIMILARITY
-#define SIMILARITY 254
+#define SIMILARITY 0.97f
 #endif
 
 // TODO
@@ -40,7 +40,8 @@ int main(int argc, char *argv[])
 
     // Image to be processed, downscaled by a factor of 2
     //cv::Mat image = cv::imread(argv[1], cv::IMREAD_GRAYSCALE);            // <- fuckin' don't
-    cv::Mat image = cv::imread(argv[1], cv::IMREAD_REDUCED_GRAYSCALE_2);    // <- for sure
+    cv::Mat image = cv::imread(argv[1], cv::IMREAD_REDUCED_COLOR_2);        // <- for sure
+    //cv::Mat image = cv::imread(argv[1], cv::IMREAD_REDUCED_GRAYSCALE_2);  // <- for sure
     //cv::Mat image = cv::imread(argv[1], cv::IMREAD_REDUCED_GRAYSCALE_4);  // <- maybe
 
     // Failure: TODO
@@ -49,8 +50,18 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    std::cerr << "Done. Image is " << image.cols << " by " << image.rows << "." << std::endl;
+    // Normalized copy
+    cv::Mat image_f;  // image copy, normalized
+    image.convertTo(image_f, CV_32F, 1.0f/255.0f);
 
+    // Failure: TODO
+    if (image_f.empty()) {
+        std::cerr << "Failure on image convert." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    std::cerr << "Done. Image is " << image.cols << " by " << image.rows << ", ";
+    std::cerr << (image.channels() > 1 ? "colored." : "grayscale.") << std::endl;
 
 
     // Step 2.1: build graph from image
@@ -76,33 +87,48 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    int nch = image_f.channels();
     // Relate pixels that satisfy the weight function W(i,j) = 1 − |Ii−Ij| ≥ t
     // -> Since our values are normalized, 1 is replaced with 255 (max intensity)
     //    and t is chosen to be 254 (arbitrary measure, has to be studied better)
-    for (int irow = 0; irow < image.rows; irow++) {
-        for (int icol = 0; icol < image.cols; icol++) {
-            uchar value = image.data[irow*image.cols+icol];
+    for (int irow = 0; irow < image_f.rows; irow++) {
+        float *scanline = image_f.ptr<float>(irow);
 
-            //std::cerr << "  Pixel " << irow*image.cols+icol << " has value " << int(value) << " and ";
+        for (int icol = 0; icol < image_f.cols; icol++) {
+            float bvalue = scanline[icol*nch+0];
+            float gvalue = scanline[icol*nch+1];
+            float rvalue = scanline[icol*nch+2];
+
+            //std::cerr << "  Pixel " << irow*image_f.cols+icol << " has value " << int(value) << " and ";
 
             // Define neighborhood around the pixel
             int irow_n_min = std::max(0, irow-NHOODRADIUS);
             int icol_n_min = std::max(0, icol-NHOODRADIUS);
-            int irow_n_max = std::min(image.rows, irow+NHOODRADIUS);
-            int icol_n_max = std::min(image.cols, icol+NHOODRADIUS);
+            int irow_n_max = std::min(image_f.rows, irow+NHOODRADIUS);
+            int icol_n_max = std::min(image_f.cols, icol+NHOODRADIUS);
 
             //std::cerr << (irow_n_max-irow_n_min)*(icol_n_max-icol_n_min) << " neighbours." << std::endl;
 
             // Look for similar pixels in this neighboorhood
             for (int irow_n = irow_n_min; irow_n < irow_n_max; irow_n++) {
+                float *neighbour_scanline = image_f.ptr<float>(irow_n);
+
                 for (int icol_n = icol_n_min; icol_n < icol_n_max; icol_n++) {
-                    uchar neighbour_value = image.data[irow_n*image.cols+icol_n];
+                    float neighbour_bvalue = neighbour_scanline[icol_n*nch+0];
+                    float neighbour_gvalue = neighbour_scanline[icol_n*nch+1];
+                    float neighbour_rvalue = neighbour_scanline[icol_n*nch+2];
+
+                    // distance function
+                    float distance = sqrtf((bvalue-neighbour_bvalue)*(bvalue-neighbour_bvalue)
+                            +(gvalue-neighbour_gvalue)*(gvalue-neighbour_gvalue)
+                            +(rvalue-neighbour_rvalue)*(rvalue-neighbour_rvalue))
+                        /sqrtf(3.0f);
 
                     // If the pixels have similarity greater than a certain measure, link them
-                    if (255-std::abs(value-neighbour_value) >= SIMILARITY) {
-                        igraph_vector_push_back(&edges, irow*image.cols+icol);
-                        igraph_vector_push_back(&edges, irow_n*image.cols+icol_n);
-                        igraph_vector_push_back(&weights, 255-std::abs(value-neighbour_value));
+                    if (1.0f-distance >= SIMILARITY) {
+                        igraph_vector_push_back(&weights, 1.0f-distance);
+                        igraph_vector_push_back(&edges, irow*image_f.cols+icol);
+                        igraph_vector_push_back(&edges, irow_n*image_f.cols+icol_n);
                     }
                 }
             }
@@ -145,7 +171,7 @@ int main(int argc, char *argv[])
 
 
     // Step 2.3: evaluate communities and separate segments
-    std::cerr << "Evaluating communities & painting segments... ";
+    std::cerr << "Evaluating communities... ";
 
     igraph_matrix_t merges;      // Merge steps array
     igraph_matrix_init(&merges, 0, 0);
@@ -157,36 +183,46 @@ int main(int argc, char *argv[])
     igraph_vector_init(&membership, 0);
 
     // Apply fastgreedy algorithm
-    igraph_community_fastgreedy(&graph, /*weights*/ NULL, &merges, &modularity,
-            /*membership vector*/ NULL);
-    //igraph_community_fastgreedy(&graph, &weights, &merges, &modularity,
+    //igraph_community_fastgreedy(&graph, /*weights*/ NULL, &merges, &modularity,
     //        /*membership vector*/ NULL);
 
+    // Version with weights
+    igraph_community_fastgreedy(&graph, &weights, &merges, &modularity,
+            /*membership vector*/ NULL);
+
+    std::cerr << "Done. ";
+
     // Membership vector
-    size_t imod = igraph_vector_which_max(&modularity);  // Max modularity index
+    size_t imod = igraph_vector_which_max(&modularity);  // max modularity index
     igraph_community_to_membership(&merges, igraph_vcount(&graph), imod, &membership, 0);
 
-    // Paint segments
-    cv::Mat segments = image.clone();                        // Image copy, to be painted
-    float max_seg_val = igraph_vector_max(&membership);      // Max segment value, for normalization
-    for (long ipixel = 0; ipixel < segments.rows*segments.cols; ipixel++)
-        segments.data[ipixel] = (uchar)(VECTOR(membership)[ipixel]*255.0f/max_seg_val);
-
-    std::cerr << "Done. Max modularity is " << VECTOR(modularity)[imod]
+    std::cerr << "Max modularity is " << VECTOR(modularity)[imod]
         << " with " << (int)igraph_vector_max(&membership)
         << " communities." << std::endl;
+
+    // Paint segments
+    std::cerr << "Painting segments... ";
+
+    cv::Mat image_s;                                     // image copy, to be painted
+    cv::cvtColor(image, image_s, cv::COLOR_BGR2GRAY);
+    float max_seg_val = igraph_vector_max(&membership);  // max segment value, for normalization
+
+    for (long ipixel = 0; ipixel < image_s.rows*image_s.cols; ipixel++)
+        image_s.data[ipixel] = (uchar)(VECTOR(membership)[ipixel]*255.0f/max_seg_val);
+
+    std::cerr << "Done." << std::endl;
 
 
 
     // Step 3: show segmentation results
     cv::Mat colored_segments;
-    cv::applyColorMap(segments, colored_segments, cv::COLORMAP_JET);
+    cv::applyColorMap(image_s, colored_segments, cv::COLORMAP_JET);
 
     cv::namedWindow("Output", cv::WINDOW_NORMAL);
     cv::namedWindow("Original", cv::WINDOW_NORMAL);
 
     cv::resizeWindow("Output", image.cols*5, image.rows*5);
-    cv::resizeWindow("Original", segments.cols*5, segments.rows*5);
+    cv::resizeWindow("Original", image_s.cols*5, image_s.rows*5);
 
     cv::imshow("Original", image);
     cv::imshow("Output", colored_segments);
@@ -206,6 +242,11 @@ int main(int argc, char *argv[])
     igraph_vector_destroy(&weights);
     igraph_vector_destroy(&edges);
     igraph_destroy(&graph);
+
+    // Images
+    image_s.release();
+    image_f.release();
+    image.release();
 
     std::cerr << "Done." << std::endl;
 
