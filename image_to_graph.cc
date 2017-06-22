@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 
@@ -10,39 +11,68 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
-// pixel neighborhood radius
-#ifndef NHOODRADIUS
-#define NHOODRADIUS 35
-#endif
-
-// pixel similarity constant
-#ifndef SIMILARITY
-#define SIMILARITY 0.97f
-#endif
-
 // TODO
-// - Use colored images for graph generation
+// - Use colored images for graph generation (Done)
 // - Implement superpixels procedure
 // - Do a shitload of tests
 
+/// Show program usage
+void usage(const char *program_name)
+{
+    std::cerr << "Usage: " << program_name << " <image name> "
+        "<neighbourhood radius> <pixel similarity constant> "
+        "[reduce: 1..3 (default: 1)]" << std::endl;
+}
+
 int main(int argc, char *argv[])
 {
+    // Step 0: process CLI arguments
+    std::cerr << "ArgsParse... ";
+
+    char  *image_name;       // input: image file name
+    int   nhood_radius;      // input: pixel area scan radius
+    float similarity_const;  // input: pixel similarity threshold
+    int   imread_flags;      // possible input: image downscaling factor
+    int   arg_error = 0;     // arguments parse error flag
+
+    if (argc < 4) {
+        arg_error = 1;
+    } else {
+
+        // Required
+        image_name = argv[1];
+        nhood_radius = atoi(argv[2]);
+        similarity_const = atof(argv[3]);
+
+        // Parse downscaling factor, if provided
+        int reduction_idx = argc > 4 ? atoi(argv[4]) : 1;
+        if (nhood_radius && similarity_const && reduction_idx > 0 && reduction_idx <= 3) {
+            const int imread_possible_flags[] = {
+                cv::IMREAD_COLOR,
+                cv::IMREAD_REDUCED_COLOR_2,
+                cv::IMREAD_REDUCED_COLOR_4,
+            };
+            // Reduction = 1 means no downscaling at all
+            imread_flags = imread_possible_flags[reduction_idx - 1];
+        } else {
+            arg_error = 1;
+        }
+    }
+
     // Failure: TODO
-    if (argc < 2) {
-        std::cerr << "Usage: ./image_to_graph <path_to_image>" << std::endl;
+    if (arg_error) {
+        usage(argv[0]);
         return EXIT_FAILURE;
     }
 
-
+    std::cerr << "Done." << std::endl;
+    // Step 0: end
 
     // Step 1: retrieve the image
     std::cerr << "Reading image... ";
 
-    // Image to be processed, downscaled by a factor of 2
-    //cv::Mat image = cv::imread(argv[1], cv::IMREAD_GRAYSCALE);            // <- fuckin' don't
-    cv::Mat image = cv::imread(argv[1], cv::IMREAD_REDUCED_COLOR_2);        // <- for sure
-    //cv::Mat image = cv::imread(argv[1], cv::IMREAD_REDUCED_GRAYSCALE_2);  // <- for sure
-    //cv::Mat image = cv::imread(argv[1], cv::IMREAD_REDUCED_GRAYSCALE_4);  // <- maybe
+    // Image to be processed, possibly downscaled
+    cv::Mat image = cv::imread(image_name, imread_flags);
 
     // Failure: TODO
     if (image.empty()) {
@@ -62,7 +92,7 @@ int main(int argc, char *argv[])
 
     std::cerr << "Done. Image is " << image.cols << " by " << image.rows << ", ";
     std::cerr << (image.channels() > 1 ? "colored." : "grayscale.") << std::endl;
-
+    // Ste 1: end
 
     // Step 2.1: build graph from image
     std::cerr << "Building graph... ";
@@ -81,12 +111,6 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    igraph_vector_t weights;  // graph edge weight array
-    if (igraph_vector_init(&weights, 0)) {
-        std::cerr << "Failure on weight array allocation." << std::endl;
-        return EXIT_FAILURE;
-    }
-
     int nch = image_f.channels();
     // Relate pixels that satisfy the weight function W(i,j) = 1 − |Ii−Ij| ≥ t
     // -> Since our values are normalized, 1 is replaced with 255 (max intensity)
@@ -102,10 +126,10 @@ int main(int argc, char *argv[])
             //std::cerr << "  Pixel " << irow*image_f.cols+icol << " has value " << int(value) << " and ";
 
             // Define neighborhood around the pixel
-            int irow_n_min = std::max(0, irow-NHOODRADIUS);
-            int icol_n_min = std::max(0, icol-NHOODRADIUS);
-            int irow_n_max = std::min(image_f.rows, irow+NHOODRADIUS);
-            int icol_n_max = std::min(image_f.cols, icol+NHOODRADIUS);
+            int irow_n_min = std::max(0, irow-nhood_radius);
+            int icol_n_min = std::max(0, icol-nhood_radius);
+            int irow_n_max = std::min(image_f.rows, irow+nhood_radius);
+            int icol_n_max = std::min(image_f.cols, icol+nhood_radius);
 
             //std::cerr << (irow_n_max-irow_n_min)*(icol_n_max-icol_n_min) << " neighbours." << std::endl;
 
@@ -119,14 +143,13 @@ int main(int argc, char *argv[])
                     float neighbour_rvalue = neighbour_scanline[icol_n*nch+2];
 
                     // distance function
-                    float distance = sqrtf((bvalue-neighbour_bvalue)*(bvalue-neighbour_bvalue)
+                    float similarity = 1.0f - sqrtf((bvalue-neighbour_bvalue)*(bvalue-neighbour_bvalue)
                             +(gvalue-neighbour_gvalue)*(gvalue-neighbour_gvalue)
                             +(rvalue-neighbour_rvalue)*(rvalue-neighbour_rvalue))
                         /sqrtf(3.0f);
 
-                    // If the pixels have similarity greater than a certain measure, link them
-                    if (1.0f-distance >= SIMILARITY) {
-                        igraph_vector_push_back(&weights, 1.0f-distance);
+                    // If the pixels have similarity_const greater than a certain measure, link them
+                    if (similarity >= similarity_const) {
                         igraph_vector_push_back(&edges, irow*image_f.cols+icol);
                         igraph_vector_push_back(&edges, irow_n*image_f.cols+icol_n);
                     }
@@ -136,12 +159,21 @@ int main(int argc, char *argv[])
     }
 
     // Add edges as batch (gotta go fast)
-    igraph_add_edges(&graph, &edges, NULL);
-    igraph_simplify(&graph, 1, 1, NULL);
+    if (igraph_add_edges(&graph, &edges, NULL)) {
+        std::cerr << "Failure adding edges to graph." << std::endl;
+        std::cerr << "Are all of your vertex IDs valid?" << std::endl;
+        std::cerr << "Does your edge vector have an odd length?" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    if (igraph_simplify(&graph, 1, 1, NULL)) {
+        std::cerr << "Failure simplifying graph." << std::endl;
+        std::cerr << "You're probably out of memory." << std::endl;
+        return EXIT_FAILURE;
+    }
 
     std::cerr << "Done. Graph has " << igraph_ecount(&graph) << " edges." << std::endl;
-
-
+    // Step 2.1: end
 
 #if 0
     // Step 2.2: write graph to a file
@@ -166,9 +198,8 @@ int main(int argc, char *argv[])
         graph_file.close();
     }
     std::cerr << "Done." << std::endl;
+    // Step 2.2: end
 #endif
-
-
 
     // Step 2.3: evaluate communities and separate segments
     std::cerr << "Evaluating communities... ";
@@ -183,11 +214,7 @@ int main(int argc, char *argv[])
     igraph_vector_init(&membership, 0);
 
     // Apply fastgreedy algorithm
-    //igraph_community_fastgreedy(&graph, /*weights*/ NULL, &merges, &modularity,
-    //        /*membership vector*/ NULL);
-
-    // Version with weights
-    igraph_community_fastgreedy(&graph, &weights, &merges, &modularity,
+    igraph_community_fastgreedy(&graph, /*weights*/ NULL, &merges, &modularity,
             /*membership vector*/ NULL);
 
     std::cerr << "Done. ";
@@ -205,14 +232,19 @@ int main(int argc, char *argv[])
 
     cv::Mat image_s;                                     // image copy, to be painted
     cv::cvtColor(image, image_s, cv::COLOR_BGR2GRAY);
-    float max_seg_val = igraph_vector_max(&membership);  // max segment value, for normalization
 
+    // Failure: TODO
+    if (image_s.empty()) {
+        std::cerr << "Failure on image color to gray (cvtColor)." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    float max_seg_val = igraph_vector_max(&membership);  // max segment value, for normalization
     for (long ipixel = 0; ipixel < image_s.rows*image_s.cols; ipixel++)
         image_s.data[ipixel] = (uchar)(VECTOR(membership)[ipixel]*255.0f/max_seg_val);
 
     std::cerr << "Done." << std::endl;
-
-
+    // Step 2.3: end
 
     // Step 3: show segmentation results
     cv::Mat colored_segments;
@@ -227,10 +259,9 @@ int main(int argc, char *argv[])
     cv::imshow("Original", image);
     cv::imshow("Output", colored_segments);
     while((cv::waitKey() & 0xEFFFFF) != 27);
+    // Step 3: end
 
-
-
-    // Step 5: cleanup & goodbye
+    // Step 4: cleanup & goodbye
     std::cerr << "Cleaning up memory... ";
 
     // Community allocation stuff
@@ -239,7 +270,6 @@ int main(int argc, char *argv[])
     igraph_matrix_destroy(&merges);
 
     // Graph structure stuff
-    igraph_vector_destroy(&weights);
     igraph_vector_destroy(&edges);
     igraph_destroy(&graph);
 
@@ -249,6 +279,7 @@ int main(int argc, char *argv[])
     image.release();
 
     std::cerr << "Done." << std::endl;
+    // Step 4: end
 
     return EXIT_SUCCESS;
 }
