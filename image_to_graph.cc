@@ -292,9 +292,8 @@ int main(int argc, char *argv[])
 #endif
 
     std::stringstream output_name;
-    char *ext = image_name + strlen(image_name) - 3;
     output_name << image_name << "." << nhood_radius << "_" << similarity_const
-        << "_" << imread_flags << "." << ext;
+        << "_" << imread_flags << ".png";
 
     cv::imwrite(output_name.str(), colored_segments);
     // Step 3: end
