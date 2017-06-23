@@ -7,12 +7,13 @@ You'll need to have installed on your system:
 
 
 Compile:
-```
-make
+```sh
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
 ```
 
+Usage:
 
-Run tests:
-```
-make tests
-```
+	$ ./image_to_graph <image name> <neighbourhood radius> <pixel similarity constant> [reduce: 1..3 (default: 1)]
