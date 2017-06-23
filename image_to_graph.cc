@@ -223,6 +223,31 @@ int main(int argc, char *argv[])
     size_t imod = igraph_vector_which_max(&modularity);  // max modularity index
     igraph_community_to_membership(&merges, igraph_vcount(&graph), imod, &membership, 0);
 
+#if 0
+    igraph_reindex_membership(&membership, NULL);
+
+    std::vector<int> comm_counts{(int)igraph_vector_max(&membership), 0};
+    for (int icomm_count = 0; icomm_count < igraph_vector_size(&membership); icomm_count++)
+        comm_counts[VECTOR(membership)[icomm_count]]++;
+
+    std::sort(comm_counts.rbegin(), comm_counts.rend());
+
+    int smol_community;
+    for (int icomm = 0; icomm < comm_counts.size(); icomm++) {
+        if (comm_counts[icomm] <= 10) {
+            smol_community = icomm;
+            break;
+        }
+    }
+
+    std::cerr << std::endl << "Index of first `1' is " << smol_community << std::endl;
+    for (int ipixel = smol_community; ipixel < igraph_vector_size(&membership); ipixel++) {
+
+        if (VECTOR(membership)[ipixel] > smol_community)
+            VECTOR(membership)[ipixel] = smol_community;
+    }
+#endif
+
     std::cerr << "Max modularity is " << VECTOR(modularity)[imod]
         << " with " << (int)igraph_vector_max(&membership)
         << " communities." << std::endl;
@@ -242,13 +267,16 @@ int main(int argc, char *argv[])
     float max_seg_val = igraph_vector_max(&membership);  // max segment value, for normalization
     for (long ipixel = 0; ipixel < image_s.rows*image_s.cols; ipixel++)
         image_s.data[ipixel] = (uchar)(VECTOR(membership)[ipixel]*255.0f/max_seg_val);
+        //image_s.data[ipixel] = (uchar)(VECTOR(membership)[ipixel]);
+
+    cv::equalizeHist(image_s, image_s);
 
     std::cerr << "Done." << std::endl;
     // Step 2.3: end
 
     // Step 3: show segmentation results
     cv::Mat colored_segments;
-    cv::applyColorMap(image_s, colored_segments, cv::COLORMAP_JET);
+    cv::applyColorMap(image_s, colored_segments, cv::COLORMAP_RAINBOW);
 
     cv::namedWindow("Output", cv::WINDOW_NORMAL);
     cv::namedWindow("Original", cv::WINDOW_NORMAL);

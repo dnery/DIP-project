@@ -1,6 +1,6 @@
 exe = image_to_graph
 libs = opencv igraph
-CXXFLAGS = -O3 -Wall `pkg-config --cflags --libs $(libs)`
+CXXFLAGS = -g -O0 -Wall `pkg-config --cflags --libs $(libs)`
 
 all: image_to_graph.o
 	$(CXX) $^ -o $(exe) $(CXXFLAGS)
@@ -8,7 +8,7 @@ all: image_to_graph.o
 .PHONY: run tests clean
 
 run:
-	./$(exe) assets/lena.jpg 42 0.975f 2
+	./$(exe) assets/lena.jpg 42 0.98f 2
 
 tests:
 	@echo "Test: Lena"
