@@ -8,7 +8,7 @@ all: image_to_graph.o
 .PHONY: run tests clean
 
 run:
-	./$(exe) assets/lena.jpg 42 0.98f 2
+	./$(exe) assets/plos.jpg 15 0.985f 3
 
 tests:
 	@echo "Test: Lena"

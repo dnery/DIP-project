@@ -46,11 +46,12 @@ int main(int argc, char *argv[])
 
         // Parse downscaling factor, if provided
         int reduction_idx = argc > 4 ? atoi(argv[4]) : 1;
-        if (nhood_radius && similarity_const && reduction_idx > 0 && reduction_idx <= 3) {
+        if (nhood_radius && similarity_const && reduction_idx > 0 && reduction_idx <= 4) {
             const int imread_possible_flags[] = {
                 cv::IMREAD_COLOR,
                 cv::IMREAD_REDUCED_COLOR_2,
                 cv::IMREAD_REDUCED_COLOR_4,
+                cv::IMREAD_REDUCED_COLOR_8,
             };
             // Reduction = 1 means no downscaling at all
             imread_flags = imread_possible_flags[reduction_idx - 1];
@@ -278,6 +279,7 @@ int main(int argc, char *argv[])
     cv::Mat colored_segments;
     cv::applyColorMap(image_s, colored_segments, cv::COLORMAP_RAINBOW);
 
+#if 0
     cv::namedWindow("Output", cv::WINDOW_NORMAL);
     cv::namedWindow("Original", cv::WINDOW_NORMAL);
 
@@ -287,6 +289,14 @@ int main(int argc, char *argv[])
     cv::imshow("Original", image);
     cv::imshow("Output", colored_segments);
     while((cv::waitKey() & 0xEFFFFF) != 27);
+#endif
+
+    std::stringstream output_name;
+    char *ext = image_name + strlen(image_name) - 3;
+    output_name << image_name << "." << nhood_radius << "_" << similarity_const
+        << "_" << imread_flags << "." << ext;
+
+    cv::imwrite(output_name.str(), colored_segments);
     // Step 3: end
 
     // Step 4: cleanup & goodbye
