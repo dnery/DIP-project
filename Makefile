@@ -1,3 +1,5 @@
+# Deprecated. Use cmake instead.
+
 exe = image_to_graph
 libs = opencv igraph
 CXXFLAGS = -g -O0 -Wall `pkg-config --cflags --libs $(libs)`

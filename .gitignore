@@ -1,13 +1,10 @@
+*.o
 *.txt
 *.pdf
 *.zip
 
-assets/
+build/
 igraph/
 paperwork/
 
-*.o
-image_to_graph
-image_to_graph.out
-image_to_graph.out.png
-build/
+view_as_graph.py
