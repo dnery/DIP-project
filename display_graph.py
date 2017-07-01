@@ -32,26 +32,3 @@ nx.draw_networkx_edges(G, pos=layout)
 pl.savefig('image_to_graph.out.png')
 
 print('Done.')
-
-## Display results
-print('Displaying (\'q\' to quit)... ', end='', flush=True)
-
-imga = cv2.imread(sys.argv[1], cv2.IMREAD_GRAYSCALE)
-imgb = cv2.imread('image_to_graph.out.png', cv2.IMREAD_GRAYSCALE)
-
-ha,wa = imga.shape[:2]
-hb,wb = imgb.shape[:2]
-
-output = np.zeros((max(ha,hb),wa+wb), np.uint8) + 255
-output[:ha,:wa]      = imga
-output[:hb,wa:wa+wb] = imgb
-
-cv2.imshow('Grayscale Image to Complex Network (\'q\' to quit)', output)
-
-while(True):
-    if cv2.waitKey(0) == ord('q'):
-        break
-
-cv2.destroyAllWindows()
-
-print('Done.')

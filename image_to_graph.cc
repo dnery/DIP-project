@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
     std::cerr << "Done. Graph has " << igraph_ecount(&graph) << " edges." << std::endl;
     // Step 2.1: end
 
-#if 0
+//#if 0
     // Step 2.2: write graph to a file
     std::cerr << "Writing to file... ";
     {
@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
     }
     std::cerr << "Done." << std::endl;
     // Step 2.2: end
-#endif
+//#endif
 
     // Step 2.3: evaluate communities and separate segments
     std::cerr << "Evaluating communities... ";
@@ -279,7 +279,6 @@ int main(int argc, char *argv[])
     cv::Mat colored_segments;
     cv::applyColorMap(image_s, colored_segments, cv::COLORMAP_RAINBOW);
 
-#if 0
     cv::namedWindow("Output", cv::WINDOW_NORMAL);
     cv::namedWindow("Original", cv::WINDOW_NORMAL);
 
@@ -289,8 +288,8 @@ int main(int argc, char *argv[])
     cv::imshow("Original", image);
     cv::imshow("Output", colored_segments);
     while((cv::waitKey() & 0xEFFFFF) != 27);
-#endif
 
+    // Write to file
     std::stringstream output_name;
     char *ext = image_name + strlen(image_name) - 3;
     output_name << image_name << "." << nhood_radius << "_" << similarity_const

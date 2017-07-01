@@ -2,6 +2,7 @@
 *.pdf
 *.zip
 
+assets/
 igraph/
 paperwork/
 
